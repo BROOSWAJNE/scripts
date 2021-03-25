@@ -1,11 +1,10 @@
 #! /usr/bin/env deno run --allow-env --allow-net
 
-const JENKINS_API_USER = Deno.env.get('JENKINS_API_USER');
-const JENKINS_API_TOKEN = Deno.env.get('JENKINS_API_TOKEN');
-const JENKINS_URL_BASE = Deno.env.get('JENKINS_URL_BASE');
-if (!JENKINS_API_USER) throw new Error('Jenkins api user not defined');
-if (!JENKINS_API_TOKEN) throw new Error('Jenkins api token not defined');
-if (!JENKINS_URL_BASE) throw new Error('Jenkins base url not defined');
+import { required } from './common/env.ts';
+
+const JENKINS_API_USER = await required('JENKINS_API_USER', 'Your Jenkins username.');
+const JENKINS_API_TOKEN = await required('JENKINS_API_TOKEN', 'Your Jenkins API token - generate it on the settings page.');
+const JENKINS_URL_BASE = await required('JENKINS_URL_BASE', 'Your Jenkins instance\'s base URL.');
 
 const AUTH_FIELDS = `${JENKINS_API_USER}:${JENKINS_API_TOKEN}`;
 const AUTH_HEADER = `Basic ${btoa(AUTH_FIELDS)}`;
