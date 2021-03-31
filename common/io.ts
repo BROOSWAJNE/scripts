@@ -1,4 +1,7 @@
+// Utilities for user and file IO
+
 import { range } from './iter.ts';
+import { red } from './colors.ts';
 
 const BUFFER_SIZE = 1024;
 
@@ -59,4 +62,10 @@ export async function prompt(prompt: string): Promise<string> {
 	const answer = await readLine(Deno.stdin);
 	await writeText(Deno.stdout, '\n');
 	return answer;
+}
+
+/** Exits the currently running script, displaying the given error message. */
+export function abort(reason: string) {
+	console.log(red(reason));
+	Deno.exit(1);
 }
