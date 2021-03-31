@@ -19,17 +19,17 @@ export const createColor = (code: number, reset = 0): Color => Object.assign(fun
 	return `${open}${string}${close}`;
 }, { toString: ( ) => ESCAPE + code + 'm' });
 
-export const reset    = createColor(0);
-export const bold     = createColor(1, 22);
-export const dim      = createColor(2, 22);
-export const italic   = createColor(3, 23);
-export const unerline = createColor(4, 24);
+export const reset     = createColor(0);
+export const bold      = createColor(1, 22);
+export const dim       = createColor(2, 22);
+export const italic    = createColor(3, 23);
+export const underline = createColor(4, 24);
 
-export const black    = createColor(30, 39);
-export const red      = createColor(31, 39);
-export const green    = createColor(32, 39);
-export const yellow   = createColor(33, 39);
-export const blue     = createColor(34, 39);
-export const magenta  = createColor(35, 39);
-export const cyan     = createColor(36, 39);
-export const white    = createColor(37, 39);
+export const black     = createColor(30, 39);
+export const red       = createColor(31, 39);
+export const green     = createColor(32, 39);
+export const yellow    = createColor(33, 39);
+export const blue      = createColor(34, 39);
+export const magenta   = createColor(35, 39);
+export const cyan      = createColor(36, 39);
+export const white     = createColor(37, 39);
