@@ -65,7 +65,7 @@ export async function prompt(prompt: string): Promise<string> {
 }
 
 /** Exits the currently running script, displaying the given error message. */
-export function abort(reason: string) {
+export function abort(reason: string): never {
 	console.log(red(reason));
 	Deno.exit(1);
 }
