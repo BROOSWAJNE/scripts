@@ -3,8 +3,8 @@
 import { 
 	dim,
 	bold,
-} from '../common/colors.ts';
-import { required } from '../common/env.ts';
+} from '../../common/colors.ts';
+import { required } from '../../common/env.ts';
 
 export type Mapping = Record<string, string | void>;
 

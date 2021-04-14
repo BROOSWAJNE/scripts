@@ -16,15 +16,17 @@ import { abort } from './common/io.ts';
 import {
 	readMapping,
 	saveMapping,
-} from './jenkins/mapping.ts';
-import { startJob } from './jenkins/jobs.ts';
+	startJob,
+} from './apis/jenkins.ts';
 
 const USAGE = [
 	`${bold('Usage')}: jenkins.ts [job] <...options>`,
+	'Starts the specified Jenkins job.',
 	'',
 	'Options:',
-	`  ${cyan('-s --save')} Associates the current working directory with the given job, so that a job name isn\'t required next time.`,
-	`  ${cyan('-h --help')} Prints this help message.`,
+	`  ${cyan(`${bold('--save')} -s`)} Associates the current working directory with the given job, `,
+	'            so that a job name isn\'t required next time.',
+	`  ${cyan(`${bold('--help')} -h`)} Prints this help message.`,
 ].join('\n');
 
 const cwd = Deno.cwd( );
@@ -55,5 +57,5 @@ if (shouldSave) {
 console.log(`Starting job: ${bold(magenta(job))}`);
 await startJob(job).then(
 	( ) => console.log(green('Job started successfully.')),
-	(err) => abort(`Request unsuccessful: ${err.message}`),
+	(err: Error) => abort(`Request unsuccessful - ${err.message}`),
 );

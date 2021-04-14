@@ -1,7 +1,7 @@
 // Wrappers around the Jenkins API
 
-import { dim } from '../common/colors.ts';
-import { required } from '../common/env.ts';
+import { dim } from '../../common/colors.ts';
+import { required } from '../../common/env.ts';
 
 export const JENKINS_API_USER = await required('JENKINS_API_USER', 'Your Jenkins username.');
 export const JENKINS_API_TOKEN = await required('JENKINS_API_TOKEN', 'Your Jenkins API token - generate it on the settings page.');
