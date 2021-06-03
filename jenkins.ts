@@ -10,22 +10,30 @@ import {
 	dim,
 	green,
 	magenta,
+	yellow,
 } from './common/colors.ts';
 import { abort } from './common/io.ts';
 
 import {
+	getBranchURLAbsolute,
+	getBuildURLAbsolute,
 	getImage,
+	getJobURLAbsolute,
 	readMapping,
 	saveMapping,
 	startJob,
 } from './apis/jenkins.ts';
+import { getCurrentBranchName } from './apis/git.ts';
 
 const COMMAND_ALIASES = {
 	'b': 'build',
 	'i': 'image',
 	'img': 'image',
+	'o': 'open',
 	's': 'build',
 	'start': 'build',
+	'v': 'open',
+	'view': 'open',
 } as Record<string, string | undefined>;
 const COMMAND_DEFAULT = 'build';
 const getAliases = (command: string) => (Object.keys(COMMAND_ALIASES) as Array<keyof typeof COMMAND_ALIASES>)
@@ -46,6 +54,9 @@ const USAGE = [
 	`  ${magenta(`jenkins.ts ${bold('image')} [job] <branch> <build> <...options>`)}`,
 	`  Aliases: ${getAliases('image').map((alias) => magenta(alias)).join(' / ') || '< none >'}`,
 	'  Gets the docker image for the latest build of the given job.',
+	`  ${magenta(`jenkins.ts ${bold('open')} [job] <branch> <build> <...options>`)}`,
+	`  Aliases: ${getAliases('image').map((alias) => magenta(alias)).join(' / ') || '< none >'}`,
+	'  Opens the given job in a web browser.',
 	`Default command: ${magenta(COMMAND_DEFAULT)}`,
 ].join('\n');
 
@@ -88,20 +99,7 @@ case 'build': {
 case 'image': {
 	const branch = args[UNNAMED_ARGUMENTS][2] ?? await (async function getBranchFromGit( ) {
 		console.log(dim('No branch specified - attempting to read from git.'));
-		const git = Deno.run({
-			cmd: [ 'git', 'symbolic-ref', 'HEAD', '--short' ],
-			cwd: cwd,
-			stdout: 'piped',
-			stderr: 'piped',
-		});
-		const [ status, stdout, stderr ] = await Promise.all([
-			git.status( ),
-			git.output( ),
-			git.stderrOutput( ),
-		]);
-		const decoder = new TextDecoder( );
-		if (!status.success) console.log(`Failed to get branch from git: ${decoder.decode(stderr).trim( )}`);
-		return decoder.decode(stdout).trim( );
+		return await getCurrentBranchName(cwd).catch((err) => console.log(yellow('Failed to get branch from git:', err)));
 	}( ));
 	const number = Number(args[UNNAMED_ARGUMENTS][3]) || undefined;
 
@@ -114,5 +112,34 @@ case 'image': {
 	}).catch((err: Error) => abort(`Unsuccessful - ${err.message}`));
 	break;
 } 
+case 'open': {
+	const branch = args[UNNAMED_ARGUMENTS][2] ?? await (async function getBranchFromGit( ) {
+		console.log(dim('No branch specified - attempting to read from git.'));
+		return await getCurrentBranchName(cwd).catch((err) => console.log(yellow('Failed to get branch from git:', err)));
+	}( ));
+	const number = Number(args[UNNAMED_ARGUMENTS][3]) || undefined;
+
+	const name = `${bold(magenta(job))}${branch ? `/${magenta(branch)}` : ''}${number ? `/${number}` : ''}`;
+	console.log(`Opening job: ${name}`);
+
+	const url = number ? getBuildURLAbsolute(job, branch, number)
+		: branch ? getBranchURLAbsolute(job, branch)
+		: getJobURLAbsolute(job);
+	const open = Deno.run({
+		cmd: [ 'open', url ],
+		cwd: cwd,
+		stdout: 'piped',
+		stderr: 'piped',
+	});
+	const [ status, stdout, stderr ] = await Promise.all([
+		open.status( ),
+		open.output( ),
+		open.stderrOutput( ),
+	]);
+	const decoder = new TextDecoder( );
+	if (!status.success) abort(`Failed to open: ${decoder.decode(stderr).trim( )}`);
+	else console.log(green('Successfully opened.'), decoder.decode(stdout).trim( ));
+	break;
+}
 default: abort(`Unknown command "${command}".`);
 }
