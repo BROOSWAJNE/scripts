@@ -5,13 +5,18 @@ export {
 	AUTH_FIELDS,
 	AUTH_HEADER,
 
-	getAbsoluteURL,
+	getURLAbsolute,
 	request,
 } from './jenkins/api.ts';
 
 export {
-	getJobAbsoluteURL,
+	getBranchURL,
+	getBranchURLAbsolute,
+	getBuildURL,
+	getBuildURLAbsolute,
+	getImage,
 	getJobURL,
+	getJobURLAbsolute,
 	startJob,
 } from './jenkins/jobs.ts';
 

@@ -11,13 +11,13 @@ export const AUTH_FIELDS = `${JENKINS_API_USER}:${JENKINS_API_TOKEN}`;
 export const AUTH_HEADER = `Basic ${btoa(AUTH_FIELDS)}`;
 
 /** Gets the full url to a given Jenkins resource, given its relative path. */
-export function getAbsoluteURL(url: string) {
+export function getURLAbsolute(url: string) {
 	// TODO: better url joining
 	return `${JENKINS_URL_BASE}/${url}`;
 }
 /** Makes a call to the Jenkins api, at the given relative URL. */
 export function request(url: string, options: RequestInit = { }) {
-	const requestURL = getAbsoluteURL(url);
+	const requestURL = getURLAbsolute(url);
 	const requestMethod = options.method ?? 'GET';
 	console.log(dim(`${requestMethod} ${requestURL}`));
 	return fetch(requestURL, { ...options, headers: {
