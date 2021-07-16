@@ -51,12 +51,20 @@ const USAGE = [
 	`  ${magenta(`jenkins.ts ${bold('build')} [job] <...options>`)}`,
 	`  Aliases: ${getAliases('build').map((alias) => magenta(alias)).join(' / ') || '< none >'}`,
 	'  Starts the specified Jenkins job.',
+	'',
 	`  ${magenta(`jenkins.ts ${bold('image')} [job] <branch> <build> <...options>`)}`,
+	`  ${cyan(bold('--branch'))} Explicitly specify the branch, while leaving the job as`,
+	'           automatic.',
+	`  ${cyan(bold('--build'))}  Explicitly specify the build number, while leaving the job`,
+	'           and/or branch as automatic.',
 	`  Aliases: ${getAliases('image').map((alias) => magenta(alias)).join(' / ') || '< none >'}`,
-	'  Gets the docker image for the latest build of the given job.',
+	'  Gets the docker image for the latest (or specified) build of the given',
+	'  job.',
+	'',
 	`  ${magenta(`jenkins.ts ${bold('open')} [job] <branch> <build> <...options>`)}`,
 	`  Aliases: ${getAliases('image').map((alias) => magenta(alias)).join(' / ') || '< none >'}`,
 	'  Opens the given job in a web browser.',
+	'',
 	`Default command: ${magenta(COMMAND_DEFAULT)}`,
 ].join('\n');
 
@@ -97,11 +105,15 @@ case 'build': {
 	break;
 }
 case 'image': {
-	const branch = args[UNNAMED_ARGUMENTS][2] ?? await (async function getBranchFromGit( ) {
+	const arg = (name: string) => typeof args[name] === 'string' ? args[name] as string
+		: typeof args[name] === 'undefined' ? undefined
+		: console.log(dim(`Argument "--${name}" must be a single string, ignoring it.`));
+
+	const branch = arg('branch') ?? args[UNNAMED_ARGUMENTS][2] ?? await (async function getBranchFromGit( ) {
 		console.log(dim('No branch specified - attempting to read from git.'));
 		return await getCurrentBranchName(cwd).catch((err) => console.log(yellow('Failed to get branch from git:', err)));
 	}( ));
-	const number = Number(args[UNNAMED_ARGUMENTS][3]) || undefined;
+	const number = Number(arg('build')) || Number(args[UNNAMED_ARGUMENTS][3]) || undefined;
 
 	const name = `${bold(magenta(job))}/${magenta(branch)}${number ? `/${number}` : ''}`;
 	console.log(`Getting docker build image: ${name}`);
