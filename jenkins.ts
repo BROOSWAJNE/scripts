@@ -25,6 +25,9 @@ import {
 } from './apis/jenkins.ts';
 import { getCurrentBranchName } from './apis/git.ts';
 
+// ----
+// Define command line arguments
+
 const COMMAND_ALIASES = {
 	'b': 'build',
 	'i': 'image',
@@ -38,6 +41,7 @@ const COMMAND_ALIASES = {
 const COMMAND_DEFAULT = 'build';
 const getAliases = (command: string) => (Object.keys(COMMAND_ALIASES) as Array<keyof typeof COMMAND_ALIASES>)
 	.filter((alias) => COMMAND_ALIASES[alias] === command);
+const printAliases = (command: string) => getAliases(command).map((alias) => magenta(alias)).join(' / ') || dim('< none >');
 
 const USAGE = [
 	`${bold('Usage')}: jenkins.ts [command] <...options>`,
@@ -49,7 +53,7 @@ const USAGE = [
 	'',
 	'Commands:',
 	`  ${magenta(`jenkins.ts ${bold('build')} [job] <...options>`)}`,
-	`  Aliases: ${getAliases('build').map((alias) => magenta(alias)).join(' / ') || '< none >'}`,
+	`  Aliases: ${printAliases('build')}`,
 	'  Starts the specified Jenkins job.',
 	'',
 	`  ${magenta(`jenkins.ts ${bold('image')} [job] <branch> <build> <...options>`)}`,
@@ -57,16 +61,19 @@ const USAGE = [
 	'           automatic.',
 	`  ${cyan(bold('--build'))}  Explicitly specify the build number, while leaving the job`,
 	'           and/or branch as automatic.',
-	`  Aliases: ${getAliases('image').map((alias) => magenta(alias)).join(' / ') || '< none >'}`,
+	`  Aliases: ${printAliases('image')}`,
 	'  Gets the docker image for the latest (or specified) build of the given',
 	'  job.',
 	'',
 	`  ${magenta(`jenkins.ts ${bold('open')} [job] <branch> <build> <...options>`)}`,
-	`  Aliases: ${getAliases('image').map((alias) => magenta(alias)).join(' / ') || '< none >'}`,
+	`  Aliases: ${printAliases('open')}`,
 	'  Opens the given job in a web browser.',
 	'',
 	`Default command: ${magenta(COMMAND_DEFAULT)}`,
 ].join('\n');
+
+// ----
+// Parse command line arguments
 
 const cwd = Deno.cwd( );
 const args = parse(Deno.args);
@@ -95,7 +102,12 @@ if (shouldSave) {
 	await saveMapping(mapping);
 }
 
+// ----
+// Run the wanted command
+
 switch (command) {
+
+// Starts a build of the given job.
 case 'build': {
 	console.log(`Starting job: ${bold(magenta(job))}`);
 	await startJob(job).then(
@@ -104,6 +116,8 @@ case 'build': {
 	);
 	break;
 }
+
+// Gets the docker image for the given build.
 case 'image': {
 	const arg = (name: string) => typeof args[name] === 'string' ? args[name] as string
 		: typeof args[name] === 'undefined' ? undefined
@@ -124,6 +138,7 @@ case 'image': {
 	}).catch((err: Error) => abort(`Unsuccessful - ${err.message}`));
 	break;
 } 
+// Opens the jenkins page for the given build in jenkins.
 case 'open': {
 	const branch = args[UNNAMED_ARGUMENTS][2] ?? await (async function getBranchFromGit( ) {
 		console.log(dim('No branch specified - attempting to read from git.'));

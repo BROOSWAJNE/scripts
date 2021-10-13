@@ -98,7 +98,7 @@ const dateBegin = from != null ? new Date(from) : await (async function getLastS
 
 	if (lastSubmittedWorklog == null) {
 		const reason = `Unable to find any worklogs submitted before ${bold(dateUntil)}`;
-		const solution = `please provide a ${bold('--form')} date`;
+		const solution = `please provide a ${bold('--from')} date`;
 		abort(`${reason}, ${solution}`);
 	}
 	
