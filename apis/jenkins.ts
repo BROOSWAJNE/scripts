@@ -17,6 +17,8 @@ export {
 	getImage,
 	getJobURL,
 	getJobURLAbsolute,
+	getLatestBuildNumber,
+	getStatus,
 	startJob,
 } from './jenkins/jobs.ts';
 

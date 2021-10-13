@@ -24,13 +24,6 @@ export const getBuildURLAbsolute = (
 	number: number,
 ) => getURLAbsolute(getBuildURL(job, branch, number));
 
-async function getLatestBuildNumber(job: string, branch: string): Promise<number> {
-	const url = `${getBranchURL(job, branch)}/api/json`;
-	const res = await request(url, { method: 'GET' });
-	const { lastBuild } = await res.json( );
-	return lastBuild.number;
-}
-
 /** Starts a build command for the given job. */
 export async function startJob(job: string) {
 	const url = `${getJobURL(job)}/build?delay=0`;
@@ -45,6 +38,28 @@ export async function startJob(job: string) {
 	const urlRedirect = res.headers.get('location');
 	const urlExpected = `${getJobURLAbsolute(job)}/`;
 	if (urlRedirect !== urlExpected) throw new Error(`Unexpected redirect: ${bold(urlRedirect)} (expected ${urlExpected})`);
+}
+
+/** Gets the number of the latest build for the given job. */
+export async function getLatestBuildNumber(job: string, branch: string): Promise<number> {
+	const url = `${getBranchURL(job, branch)}/api/json`;
+	const res = await request(url, { method: 'GET' });
+	const { lastBuild } = await res.json( );
+	return lastBuild.number;
+}
+
+/** Gets the build status for the given job. */
+export async function getStatus(job: string, { branch, number }: {
+	branch?: string;
+	number?: number;
+}): Promise<'SUCCESS' | 'FAILURE' | null> {
+	if (!branch) branch = 'master';
+	if (!number) number = await getLatestBuildNumber(job, branch);
+
+	const url = `${getBuildURL(job, branch, number)}/api/json`;
+	const { result } = await request(url, { method: 'GET' })
+		.then((res) => res.json( ));
+	return result;
 }
 
 /** Gets the docker build image for the given job. */

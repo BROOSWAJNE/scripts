@@ -10,18 +10,22 @@ import {
 	dim,
 	green,
 	magenta,
+	red,
 	yellow,
 } from './common/colors.ts';
 import {
 	abort,
 	writeText,
 } from './common/io.ts';
+import { getTimeOfDayString } from './common/date.ts';
 
 import {
 	getBranchURLAbsolute,
 	getBuildURLAbsolute,
 	getImage,
 	getJobURLAbsolute,
+	getLatestBuildNumber,
+	getStatus,
 	readMapping,
 	saveMapping,
 	startJob,
@@ -40,6 +44,7 @@ const COMMAND_ALIASES = {
 	'start': 'build',
 	'v': 'open',
 	'view': 'open',
+	'w': 'watch',
 } as Record<string, string | undefined>;
 const COMMAND_DEFAULT = 'build';
 const getAliases = (command: string) => (Object.keys(COMMAND_ALIASES) as Array<keyof typeof COMMAND_ALIASES>)
@@ -72,6 +77,10 @@ const USAGE = [
 	`  ${magenta(`jenkins.ts ${bold('open')} [job] <branch> <build> <...options>`)}`,
 	`  Aliases: ${printAliases('open')}`,
 	'  Opens the given job in a web browser.',
+	'',
+	`  ${magenta(`jenkins.ts ${bold('watch')} [job] <branch> <build>`)}`,
+  `  Aliases: ${printAliases('watch')}`,
+	'  Watches the given job until it completes, and sends a notification once that happens.',
 	'',
 	`Default command: ${magenta(COMMAND_DEFAULT)}`,
 ].join('\n');
@@ -107,6 +116,21 @@ if (shouldSave) {
 }
 
 // ----
+// Helpers shared between commands
+
+/** Gets the named argument with the given name, ignoring it if it was used as a boolean flag.  */
+const getArgument = (name: string) => typeof args[name] === 'string' ? args[name] as string
+	: typeof args[name] === 'undefined' ? undefined
+	: console.log(dim(`Argument "--${name}" must be a single string, ignoring it.`));
+/** Gets the current (or specified) branch name. */
+const getBranch = async ( ) => getArgument('branch') ?? args[UNNAMED_ARGUMENTS][2] ?? await (async function getBranchFromGit( ) {
+	console.log(dim('No branch specified - attempting to read from git.'));
+	return await getCurrentBranchName(cwd);
+}( ));
+/** Gets the specified build number. */
+const getBuildNumber = ( ) => Number(getArgument('build')) || Number(args[UNNAMED_ARGUMENTS][3]) || undefined;
+
+// ----
 // Run the wanted command
 
 switch (command) {
@@ -123,17 +147,11 @@ case 'build': {
 
 // Gets the docker image for the given build.
 case 'image': {
-	const arg = (name: string) => typeof args[name] === 'string' ? args[name] as string
-		: typeof args[name] === 'undefined' ? undefined
-		: console.log(dim(`Argument "--${name}" must be a single string, ignoring it.`));
+	const branch = await getBranch( );
+	const number = getBuildNumber( );
+	const copy = args['copy'] !== undefined || args['c'] === true;
 
-	const branch = arg('branch') ?? args[UNNAMED_ARGUMENTS][2] ?? await (async function getBranchFromGit( ) {
-		console.log(dim('No branch specified - attempting to read from git.'));
-		return await getCurrentBranchName(cwd).catch((err) => console.log(yellow('Failed to get branch from git:', err)));
-	}( ));
-	const number = Number(arg('build')) || Number(args[UNNAMED_ARGUMENTS][3]) || undefined;
-
-	const name = `${bold(magenta(job))}/${magenta(branch)}${number ? `/${number}` : ''}`;
+	const name = `${bold(magenta(job))}/${magenta(branch)}${number ? `#${number}` : ''}`;
 	console.log(`Getting docker build image: ${name}`);
 
 	await getImage(job, { branch, number }).then(function onceSuccessful(image) {
@@ -161,16 +179,14 @@ case 'image': {
 
 // Opens the jenkins page for the given build in jenkins.
 case 'open': {
-	const branch = args[UNNAMED_ARGUMENTS][2] ?? await (async function getBranchFromGit( ) {
-		console.log(dim('No branch specified - attempting to read from git.'));
-		return await getCurrentBranchName(cwd).catch((err) => console.log(yellow('Failed to get branch from git:', err)));
-	}( ));
-	const number = Number(args[UNNAMED_ARGUMENTS][3]) || undefined;
+	const branch = await getBranch( )
+		.catch((err: unknown) => console.log(yellow('Failed to get current branch:', err)));
+	const number = getBuildNumber( );
 
-	const name = `${bold(magenta(job))}${branch ? `/${magenta(branch)}` : ''}${number ? `/${number}` : ''}`;
+	const name = `${bold(magenta(job))}${branch ? `/${magenta(branch)}` : ''}${number ? `#${number}` : ''}`;
 	console.log(`Opening job: ${name}`);
 
-	const url = number ? getBuildURLAbsolute(job, branch, number)
+	const url = branch && number ? getBuildURLAbsolute(job, branch, number)
 		: branch ? getBranchURLAbsolute(job, branch)
 		: getJobURLAbsolute(job);
 	const open = Deno.run({
@@ -189,5 +205,54 @@ case 'open': {
 	else console.log(green('Successfully opened.'), decoder.decode(stdout).trim( ));
 	break;
 }
+
+// Watches the given build until it is complete.
+case 'watch': {
+	const branch = await getBranch( );
+	const number = getBuildNumber( ) || await getLatestBuildNumber(job, branch);
+
+	const name = `${bold(magenta(job))}/${magenta(branch)}${number ? `#${number}` : ''}`;
+	console.log(`Watching build until completion: ${name}`);
+
+	// wait until the build completes
+
+	let status = await getStatus(job, { branch, number });
+	let delay = 0;
+	while (status == null) {
+		delay = Math.min(30 * 1000, delay + 1000);
+
+		const time = getTimeOfDayString(new Date( ));
+		console.log(`${time} ${name} ${bold(dim('Pending'))} - Refreshing in ${bold(`${delay / 1000}s`)}...`);
+
+		await new Promise((resolve) => setTimeout(resolve, delay));
+		status = await getStatus(job, { branch, number });
+	}
+
+	// log the result
+
+	const link = getBuildURLAbsolute(job, branch, number);
+	const time = getTimeOfDayString(new Date( ));
+	const result = status === 'SUCCESS' ? bold(green('Successful'))
+		: status === 'FAILURE' ? bold(red('Failed')) : bold(yellow(status));
+	console.log(`${time} ${name} ${result}`);
+	console.log(link);
+
+	// notify the user
+
+	const sound = status === 'SUCCESS' ? 'Glass'
+		: status === 'FAILURE' ? 'Sosumi' : 'Funk';
+	const notify = await Deno.run({
+		cmd: [ 'osascript', '-e', [
+			`display notification "Build status: ${status}"`,
+			`with title "${job}/${branch}#${number}"`,
+			`sound name "${sound}"`,
+		].join(' ') ],
+	}).status( );
+	if (!notify.success) console.log(dim('Failed to send notification'));
+	else console.log(dim('Notification sent to desktop'));
+
+	break;
+}
+
 default: abort(`Unknown command "${command}".`);
 }
