@@ -12,7 +12,10 @@ import {
 	magenta,
 	yellow,
 } from './common/colors.ts';
-import { abort } from './common/io.ts';
+import {
+	abort,
+	writeText,
+} from './common/io.ts';
 
 import {
 	getBranchURLAbsolute,
@@ -57,10 +60,11 @@ const USAGE = [
 	'  Starts the specified Jenkins job.',
 	'',
 	`  ${magenta(`jenkins.ts ${bold('image')} [job] <branch> <build> <...options>`)}`,
-	`  ${cyan(bold('--branch'))} Explicitly specify the branch, while leaving the job as`,
-	'           automatic.',
-	`  ${cyan(bold('--build'))}  Explicitly specify the build number, while leaving the job`,
-	'           and/or branch as automatic.',
+	`  ${cyan(`${bold('--copy')} -c`)} Copies the docker image identifier to the clipboard.`,
+	`  ${cyan(bold('--branch'))}  Explicitly specify the branch, while leaving the job as`,
+	'            automatic.',
+	`  ${cyan(bold('--build'))}   Explicitly specify the build number, while leaving the job`,
+	'            and/or branch as automatic.',
 	`  Aliases: ${printAliases('image')}`,
 	'  Gets the docker image for the latest (or specified) build of the given',
 	'  job.',
@@ -133,11 +137,28 @@ case 'image': {
 	console.log(`Getting docker build image: ${name}`);
 
 	await getImage(job, { branch, number }).then(function onceSuccessful(image) {
+
 		console.log(green('Successfully got docker build image:'));
 		console.log(image);
+
+		if (!copy) return;
+
+		console.log(dim('Writing to clipboard'));
+		const clipboard = Deno.run({
+			cmd: [ 'pbcopy' ],
+			stdin: 'piped',
+		});
+		writeText(clipboard.stdin, image).then(async function ensureSuccess( ) {
+			clipboard.stdin.close( );
+			const { success, code } = await clipboard.status( );
+			if (!success) throw new Error(`pbcopy exited with code ${code}`);
+			else console.log(dim('Successfully written to clipboard'));
+		}).catch((err) => console.log(dim('Failed to write to clipboard:', err)));
+
 	}).catch((err: Error) => abort(`Unsuccessful - ${err.message}`));
 	break;
 } 
+
 // Opens the jenkins page for the given build in jenkins.
 case 'open': {
 	const branch = args[UNNAMED_ARGUMENTS][2] ?? await (async function getBranchFromGit( ) {
