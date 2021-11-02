@@ -78,9 +78,10 @@ const dateBegin = from != null ? new Date(from) : await (async function getLastS
 		day: DAY_IN_MS,
 		week: WEEK_IN_MS,
 		month: 31 * DAY_IN_MS,
+		trimester: 3 * 31 * DAY_IN_MS,
 	};
-	const unchecked = Object.keys(intervals)
-		.sort((a, b) => intervals[b as keyof typeof intervals] - intervals[a as keyof typeof intervals]);
+	const unchecked = (Object.keys(intervals) as Array<keyof typeof intervals>)
+		.sort((a, b) => intervals[b] - intervals[a]);
 
 	let lastSubmittedWorklog: TempoWorklog | null = null;
 	while (lastSubmittedWorklog == null && unchecked.length) {
