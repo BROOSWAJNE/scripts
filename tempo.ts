@@ -125,7 +125,7 @@ const existing = await getWorklogs(dateBegin, dateUntil);
 console.log(`Existing submissions found: ${bold(cyan(existing.length))}`);
 for (const worklog of existing) {
 	const worklogDuration = worklog.timeSpentSeconds * SEC_IN_MS;
-	const worklogFinished = new Date(worklog.started.getTime( ) * worklogDuration);
+	const worklogFinished = new Date(worklog.started.getTime( ) + worklogDuration);
 	console.log(dim(`${worklog.issue.key}: ${italic(format(worklog.started))} -> ${italic(format(worklogFinished))}`));
 }
 linebreak( );
