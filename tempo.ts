@@ -84,12 +84,14 @@ const dateBegin = from != null ? new Date(from) : await (async function getLastS
 		.sort((a, b) => intervals[b] - intervals[a]);
 
 	let lastSubmittedWorklog: TempoWorklog | null = null;
+	let dateTo = dateUntil;
 	while (lastSubmittedWorklog == null && unchecked.length) {
 		const interval = unchecked.pop( ) as keyof typeof intervals;
 		const dateFrom = new Date(dateUntil.getTime( ) - intervals[interval]);
 
 		console.log(dim(`Looking for worklogs submitted since ${bold(format(dateFrom))}`));
-		const worklogs = await getWorklogs(dateFrom, dateUntil);
+		const worklogs = await getWorklogs(dateFrom, dateTo);
+		dateTo = dateFrom;
 		if (!worklogs.length) continue;
 
 		lastSubmittedWorklog = worklogs
