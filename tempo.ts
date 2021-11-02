@@ -36,7 +36,7 @@ import {
 
 type TimewRecordCompleted = TimewRecord & { end: NonNullable<TimewRecord['end']> }
 
-const RX_JIRA_TICKET = /^CSD-\d+$/;
+const RX_JIRA_TICKET = /^(?:CSD|INT)-\d+$/;
 const USAGE = [
 	`${bold('Usage')}: tempo.ts <...options>`,
 	'Uploads timewarrior records to your jira tempo timesheet.',
