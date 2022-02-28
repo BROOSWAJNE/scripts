@@ -70,6 +70,7 @@ export async function getWorklogs(
 		headers: { 'Content-Type': 'application/json' },
 		body: JSON.stringify({
 			...options, 
+			worker: [ JIRA_USERNAME ],
 			// tempo wants the day, not the full date and time
 			from: from.toISOString( ).slice(0, 'YYYY-MM-DD'.length),
 			to: to.toISOString( ).slice(0, 'YYYY-MM-DD'.length),
